@@ -54,7 +54,7 @@ int main() {
     char input_line[5002]={0};   // 原始輸入字串（整行指令）
     char *argv_single[256] = {0};
     char line_copy[5002] = {0};  // split_commands 用的可修改副本
-    char *parts[20] = {0};      // 以 '|' 切開後的每個 command 片段
+    char *parts[1024] = {0};      // 以 '|' 切開後的每個 command 片段
     int part_count = 0;         // 管線中 command 的數量
 
     int number_n = 0;
@@ -62,13 +62,13 @@ int main() {
     int target_line = 0; // current_line + number_n for number pipe delay
 
     // 把「現在還不能送出去的 pipe」先記住，等未來某一行到了再接上去。
-    pending_pipe_t pending[128] = {0};
+    pending_pipe_t pending[512] = {0};
     int ready_pending_idx = -1;
     int target_pending_idx = -1;
 
     command_t *cmd_single = NULL;
-    command_t *cmds[200] = {0}; // 每個 command 解析後的結構
-    char *argvs[20][50] = {0};  // [第幾個command][第幾個參數]
+    command_t *cmds[512] = {0}; // 每個 command 解析後的結構
+    char *argvs[1024][256] = {0};  // [第幾個command][第幾個參數]
     
     // 固定使用作業路徑，避免混入系統 PATH 造成測試結果不一致
     setenv("PATH", "bin:.", 1);
