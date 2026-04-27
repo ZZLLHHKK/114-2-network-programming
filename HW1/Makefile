@@ -1,14 +1,25 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -g
+CFLAGS = -Wall -Wextra -g -Iinclude
 TARGET = shell
-SRCS = src/shell.c src/string_utils.c
+SRC_DIR = src
+OBJ_DIR = object
 
-.PHONY: all clean
+SRCS = $(SRC_DIR)/shell.c $(SRC_DIR)/string_utils.c
+OBJS = $(OBJ_DIR)/shell.o $(OBJ_DIR)/string_utils.o
+
+.PHONY: all clean run
 
 all: $(TARGET)
 
-$(TARGET): $(SRCS)
-	$(CC) $(CFLAGS) $(SRCS) -o $(TARGET)
+$(TARGET): $(OBJS)
+	$(CC) $(CFLAGS) $(OBJS) -o $(TARGET)
+
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
+	mkdir -p $(OBJ_DIR)
+	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	rm -f $(TARGET)
+	rm -f $(TARGET) $(OBJS)
+
+run: $(TARGET)
+	./$(TARGET)

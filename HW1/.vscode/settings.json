@@ -1,7 +1,7 @@
 {
     "code-runner.runInTerminal": true,
     "code-runner.executorMap": {
-        "c": "cd $dir && gcc shell.c string_utils.c -o shell && ./shell"
+        "c": "cd ${workspaceFolder} && make && ./shell"
     },
     "makefile.configureOnOpen": false
 }
