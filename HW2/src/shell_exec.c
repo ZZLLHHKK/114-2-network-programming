@@ -37,6 +37,8 @@ int run_single_command(command_t *cmd_single, char **parts, char **argv_single,
         return 0;
     }
 
+    // who/name/tell/yell 目前先走 external command（由 bin/ 下可執行檔處理）
+
     // external command
     pid_t pid = fork();
     if (pid < 0) {

@@ -9,6 +9,8 @@
 #include <ctype.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <sys/file.h>
+#include <sys/stat.h>
 #include <errno.h>
 #include "string_utils.h"
 #include "number_pipe.h"
