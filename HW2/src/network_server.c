@@ -81,7 +81,7 @@ void start_server(int port, void (*child_main)()) {
                 used[existing_uid] = true;
 
             // 找最小未使用 uid
-            unsigned int new_uid = 1;
+            unsigned int new_uid = 0;
             while (new_uid < 1024 && used[new_uid]) new_uid++;
 
             // 追加寫入
