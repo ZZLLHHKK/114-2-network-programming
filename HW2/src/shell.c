@@ -20,9 +20,6 @@ void shell_loop() {
     command_t *cmds[512] = {0}; // 每個 command 解析後的結構
     char *argvs[1024][256] = {0};  // [第幾個command][第幾個參數]
     
-    // 固定使用作業路徑，避免混入系統 PATH 造成測試結果不一致
-    setenv("PATH", "bin:.", 1);
-
     do {
         memset(argv_single, 0, sizeof(argv_single));
         printf("%% ");
@@ -88,5 +85,25 @@ void shell_loop() {
 }
 
 int main() {
+    // 依照執行檔所在目錄設定 PATH，避免在其他 cwd 啟動時找不到 bin/*
+    char exe_path[4096] = {0};
+    ssize_t n = readlink("/proc/self/exe", exe_path, sizeof(exe_path) - 1);
+    if (n > 0) {
+        exe_path[n] = '\0';
+        char *slash = strrchr(exe_path, '/');
+        if (slash != NULL) {
+            *slash = '\0';
+            if (chdir(exe_path) != 0)
+                perror("chdir");
+            char path_env[8192] = {0};
+            snprintf(path_env, sizeof(path_env), "%s/bin:.", exe_path);
+            setenv("PATH", path_env, 1);
+        } else {
+            setenv("PATH", "bin:.", 1);
+        }
+    } else {
+        setenv("PATH", "bin:.", 1);
+    }
+
     start_server(7001, shell_loop); // 1024-65535 任意數字, 0-1023需要root才能用
 }
