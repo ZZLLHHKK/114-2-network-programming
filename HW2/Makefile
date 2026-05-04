@@ -31,4 +31,7 @@ clean:
 	rm -f $(TARGET) $(OBJS) $(BIN_EXES)
 
 run: $(TARGET)
+	-fuser -k 7001/tcp 2>/dev/null; true
+	> /tmp/userlist
+	rm -f /tmp/user_fifo_*
 	./$(TARGET)
