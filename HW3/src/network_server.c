@@ -222,6 +222,41 @@ void start_server(int port, void (*child_main)()) {
             // =====================================================
 
             do_login();                   // 登入／註冊流程
+
+            // === 登入後更新 userlist 的 name 欄位 ===
+            {
+                const char *my_name = getenv("MY_NAME");
+                if (my_name) {
+                    int ufd = open("/tmp/userlist", O_RDWR, 0644);
+                    if (ufd >= 0) {
+                        flock(ufd, LOCK_EX);
+                        FILE *ufin = fdopen(ufd, "r+");
+                        char lines[1024][128];
+                        int lcount = 0;
+                        while (lcount < 1024 && fgets(lines[lcount], 128, ufin))
+                            lcount++;
+                        rewind(ufin);
+                        ftruncate(ufd, 0);
+                        unsigned int u_uid, u_port; int u_pid;
+                        char u_name[30], u_ip[16];
+                        for (int i = 0; i < lcount; i++) {
+                            if (sscanf(lines[i], "%u %29s %15s %u %d",
+                                       &u_uid, u_name, u_ip, &u_port, &u_pid) == 5
+                                && u_pid == getpid()) {
+                                fprintf(ufin, "%u %s %s %u %d\n",
+                                        u_uid, my_name, u_ip, u_port, u_pid);
+                            } else {
+                                fputs(lines[i], ufin);
+                            }
+                        }
+                        fflush(ufin);
+                        flock(ufd, LOCK_UN);
+                        fclose(ufin);
+                    }
+                }
+            }
+            // ==========================================
+
             child_main();                 // 執行「服務顧客」函數
 
             // === 斷線時從 /tmp/userlist 移除自己那行 ===

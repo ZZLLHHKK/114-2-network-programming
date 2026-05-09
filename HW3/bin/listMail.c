@@ -37,7 +37,7 @@ int main(int argc, char **argv) { // listmail
     int num_row = mysql_num_rows(result);
 
     if (num_row == 0) {
-        printf("no mail\n");
+        printf("empty !\n");
     } else {
         printf("%-6s %-20s %-12s %s\n", "<id>", "<date>", "<sender>", "<message>");
         MYSQL_ROW row;
