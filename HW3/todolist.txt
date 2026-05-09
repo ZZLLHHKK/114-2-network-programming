@@ -1,0 +1,18 @@
+1. 登入 / 登出系統
+    帳號、密碼驗證（接 MySQL 或 Redis）
+    登入失敗提示、找不到用戶時可註冊新帳號
+
+2. 信箱機制（Mail Box）
+
+    新增三個外部指令放在 bin/：
+    listMail — 列出自己的信件
+    mailto <user> <msg> — 寄信給某用戶（支援 offline 接收）
+    delMail <id> — 刪除指定信件
+
+3. 群組機制（類似 Line 群組）
+
+    新增七個外部指令放在 bin/：
+    createGroup / delGroup — 建立、刪除群組
+    addTo / leaveGroup / remove — 管理成員
+    listGroup — 列出自己所在的群組
+    gyell <group> <msg> — 對群組廣播訊息
