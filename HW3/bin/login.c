@@ -1,8 +1,10 @@
+#define _GNU_SOURCE
 #include <mysql/mysql.h>
 #include "db_config.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <crypt.h>
 
 void finish(MYSQL *con) {
     printf("%d\n",-1);
@@ -34,7 +36,8 @@ int main(int argc, char **argv) {
     MYSQL_ROW row;
     if (num_rows > 0) {
         row = mysql_fetch_row(result);
-        if (strcmp(row[2], argv[2])==0)
+        char *check = crypt(argv[2], row[2]);
+        if (check && strcmp(row[2], check)==0)
             res = 0;
         else
             res = 1;

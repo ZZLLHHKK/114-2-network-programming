@@ -33,10 +33,10 @@ $(BIN_DIR)/%: $(BIN_DIR)/%.c
 
 # MySQL 指令（login/register）
 $(BIN_DIR)/login: $(BIN_DIR)/login.c
-	$(CC) $(CFLAGS) $< -o $@ $(MYSQL_FLAGS)
+	$(CC) $(CFLAGS) $< -o $@ $(MYSQL_FLAGS) -lcrypt
 
 $(BIN_DIR)/register: $(BIN_DIR)/register.c
-	$(CC) $(CFLAGS) $< -o $@ $(MYSQL_FLAGS)
+	$(CC) $(CFLAGS) $< -o $@ $(MYSQL_FLAGS) -lcrypt
 
 $(BIN_DIR)/mailto: $(BIN_DIR)/mailto.c
 	$(CC) $(CFLAGS) $< -o $@ $(MYSQL_FLAGS)

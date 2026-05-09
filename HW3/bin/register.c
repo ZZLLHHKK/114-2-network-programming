@@ -1,8 +1,10 @@
+#define _GNU_SOURCE
 #include <mysql/mysql.h>
 #include "db_config.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <crypt.h>
 
 void finish(MYSQL *con) {
     printf("%s\n", mysql_error(con));
@@ -73,9 +75,13 @@ int main(int argc, char **argv) { // argv[1] = account, argv[2] = password
         mysql_close(con);
         exit(0);
     }
-    sprintf(sql, "INSERT INTO user (name, DB_PASSWORD, grp) VALUES ('%s', '%s', 0)", argv[1], argv[2]);
-    if (mysql_query(con, sql)) finish(con);
-
+    char *raw_hash = crypt(argv[2], "$6$mysalt$");
+    char hashed[200];
+    strncpy(hashed, raw_hash ? raw_hash : argv[2], sizeof(hashed)-1);
+    hashed[sizeof(hashed)-1] = '\0';
+    char sql2[512];
+    sprintf(sql2, "INSERT INTO user (name, password, grp) VALUES ('%s', '%s', 0)", argv[1], hashed);
+    if (mysql_query(con, sql2)) finish(con);
     printf("0\n");
     mysql_close(con);
     exit(0);
