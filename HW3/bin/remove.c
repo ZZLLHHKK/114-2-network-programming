@@ -94,8 +94,11 @@ int main(int argc, char **argv) { // remove <group_name> <user_name> (only owner
         printf("not found !\n");
     }
     if (n_already > 0) {
-        for (int i = 0; i < n_already; i++) printf("%s ", already[i]);
-        printf("is not in group.\n");
+        for (int i = 0; i < n_already; i++) {
+            printf("%s", already[i]);
+            if (i < n_already - 1) printf(", ");
+        }
+        printf(" is not in group.\n");
     }
     if (n_success > 0) {
         for (int i = 0; i < n_success; i++) printf("%s ", success[i]);

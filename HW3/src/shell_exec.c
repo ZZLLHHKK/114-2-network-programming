@@ -37,7 +37,26 @@ int run_single_command(command_t *cmd_single, char **parts, char **argv_single,
         return 0;
     }
 
-    // who/name/tell/yell 目前先走 external command（由 bin/ 下可執行檔處理）
+    // built-in: name（需要在 parent process 同步更新 MY_NAME，使 prompt 即時生效）
+    if (strcmp(argv_single[0], "name") == 0) {
+        pid_t pid = fork();
+        if (pid < 0) {
+            exit(EXIT_FAILURE);
+        } else if (pid == 0) {
+            if (execvp(argv_single[0], argv_single) == -1) {
+                fprintf(stderr, "Unknown command: [%s].\n", argv_single[0]);
+                exit(127);
+            }
+        } else {
+            int status;
+            waitpid(pid, &status, 0);
+            if (WIFEXITED(status) && WEXITSTATUS(status) == 0 && argv_single[1] != NULL)
+                setenv("MY_NAME", argv_single[1], 1);
+        }
+        consume_ready_pending(ready_pending_idx, pending);
+        free(cmd_single);
+        return 0;
+    }
 
     // external command
     pid_t pid = fork();

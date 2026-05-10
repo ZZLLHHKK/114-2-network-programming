@@ -13,6 +13,7 @@ void finish(MYSQL *con) {
 }
 
 int main(int argc, char **argv) {
+    (void)argc;
     MYSQL *con = mysql_init(NULL);
     mysql_options(con, MYSQL_SET_CHARSET_NAME, "utf8");
     mysql_options(con, MYSQL_INIT_COMMAND, "SET NAMES utf8");
@@ -23,9 +24,10 @@ int main(int argc, char **argv) {
         
     if (mysql_real_connect(con, DB_HOST, DB_USER, DB_PASSWORD, DB_NAME,0,NULL,0) == NULL) finish(con);
 
-    char sql[100];
-    
-    sprintf(sql, "SELECT * FROM user WHERE name='%s'", argv[1]);
+    char escaped_name[513];
+    mysql_real_escape_string(con, escaped_name, argv[1], strlen(argv[1]));
+    char sql[600];
+    snprintf(sql, sizeof(sql), "SELECT * FROM user WHERE name='%s'", escaped_name);
     if (mysql_query(con, sql)) finish(con);
 
     MYSQL_RES *result = mysql_store_result(con);

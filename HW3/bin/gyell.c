@@ -46,6 +46,20 @@ int main(int argc, char **argv) { // gyell <group_name> <msg>
         printf("Group not found !\n");
         mysql_close(con); return 0;
     }
+    mysql_free_result(res);
+
+    // 確認自己是群組成員
+    snprintf(sql, sizeof(sql),
+        "SELECT id FROM grp_member WHERE group_name='%s' AND user_name='%s' LIMIT 1",
+        grp_name, my_name);
+    if (mysql_query(con, sql)) finish(con);
+    res = mysql_store_result(con);
+    if (mysql_num_rows(res) == 0) {
+        mysql_free_result(res);
+        printf("Group not found !\n");
+        mysql_close(con); return 0;
+    }
+    mysql_free_result(res);
 
     // 把群組人員存入陣列
     char members[128][64];

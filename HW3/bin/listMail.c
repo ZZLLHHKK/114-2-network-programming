@@ -10,7 +10,7 @@ void finish(MYSQL *con) {
     exit(1);
 }
 
-int main(int argc, char **argv) { // listmail
+int main(void) { // listmail
     const char *my_name = getenv("MY_NAME");
     if (my_name == NULL) my_name = "unknown";
 

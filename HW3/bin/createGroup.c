@@ -46,11 +46,11 @@ int main(int argc, char **argv) { // createGroup <group_name>
         mysql_close(con);
         exit(0);
     }
-    sprintf(sql, "INSERT INTO grp (name, owner) VALUES ('%s', '%s')", name, owner);
+    snprintf(sql, sizeof(sql), "INSERT INTO grp (name, owner) VALUES ('%s', '%s')", name, owner);
     if (mysql_query(con, sql)) finish(con);
 
     char sql2[256];
-    sprintf(sql2, "INSERT INTO grp_member (group_name, user_name) VALUES ('%s', '%s')", name, owner);
+    snprintf(sql2, sizeof(sql2), "INSERT INTO grp_member (group_name, user_name) VALUES ('%s', '%s')", name, owner);
     if (mysql_query(con, sql2)) finish(con);
 
     printf("Create group success !\n");

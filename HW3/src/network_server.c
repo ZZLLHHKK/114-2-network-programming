@@ -6,6 +6,28 @@ static void sigchld_handler(int sig) { // when child process is over, we have to
     while (waitpid(-1, NULL, WNOHANG) > 0); // WNOHANG 表示「不要卡住，沒有就馬上回來」。
 }
 
+// 用 pipe+fork+execvp 執行外部指令並讀回它印出的整數，不走 shell，避免 shell injection
+static int run_cmd_argv(char *argv_cmd[]) {
+    int pipefd[2];
+    if (pipe(pipefd) == -1) return -1;
+    pid_t pid = fork();
+    if (pid < 0) { close(pipefd[0]); close(pipefd[1]); return -1; }
+    if (pid == 0) {
+        close(pipefd[0]);
+        dup2(pipefd[1], STDOUT_FILENO);
+        close(pipefd[1]);
+        execvp(argv_cmd[0], argv_cmd);
+        exit(127);
+    }
+    close(pipefd[1]);
+    int result = -1;
+    FILE *fp = fdopen(pipefd[0], "r");
+    if (fp) { fscanf(fp, "%d", &result); fclose(fp); }
+    else close(pipefd[0]);
+    waitpid(pid, NULL, 0);
+    return result;
+}
+
 static void do_login() {
     char user_name[256], password[256];
 
@@ -21,14 +43,9 @@ static void do_login() {
         fgets(password, sizeof(password), stdin);
         password[strcspn(password, "\r\n")] = '\0';  // 去掉 telnet 傳來的 \r\n
 
-        // 2. call bin/login
-        char cmd[1024];
-        snprintf(cmd, sizeof(cmd), "bin/login '%s' '%s'", user_name, password);
-
-        FILE *fp = popen(cmd, "r"); // pipe open 開一個子程序，把它的 stdout 當作 FILE* 來讀
-        int res = -1;
-        fscanf(fp, "%d", &res);      // 讀 bin/login 印出來的那個數字（0/1/2）
-        pclose(fp); // pipe close  關閉子程序
+        // 2. call bin/login（直接 execvp，不走 shell，避免 shell injection）
+        char *login_argv[] = {"bin/login", user_name, password, NULL};
+        int res = run_cmd_argv(login_argv);
 
         // 3. three-case
         if (res == 0) { // success login
@@ -62,13 +79,8 @@ static void do_login() {
                     fgets(new_password, sizeof(new_password), stdin);
                     new_password[strcspn(new_password, "\r\n")] = '\0';  // 去掉 telnet 傳來的 \r\n
 
-                    char new_account[1024];
-                    snprintf(new_account, sizeof(new_account), "bin/register '%s' '%s'", new_user_name, new_password);
-
-                    FILE *rfp = popen(new_account, "r");
-                    int rres = -1;
-                    fscanf(rfp, "%d", &rres);
-                    pclose(rfp);
+                    char *reg_argv[] = {"bin/register", new_user_name, new_password, NULL};
+                    int rres = run_cmd_argv(reg_argv);
 
                     if (rres == 0) {
                         printf("Create success !\n");

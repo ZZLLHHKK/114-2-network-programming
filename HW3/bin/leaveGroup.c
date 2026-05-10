@@ -56,6 +56,7 @@ int main(int argc, char **argv) { // leaveGroup <group_name>
             if (mysql_query(con, sql2)) finish(con);
             printf("Leave success !\n");
         }
+        mysql_free_result(res1);
     }
 
     mysql_free_result(result);

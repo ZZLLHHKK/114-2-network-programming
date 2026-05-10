@@ -44,7 +44,7 @@ int main(int argc, char **argv) { // mailto user_name msg
 
     // if user not exist, exit program
     if (num_row == 0) {
-        printf("User not found!\n");
+        printf("User not found !\n");
         mysql_close(con);
         exit(0);
     }
