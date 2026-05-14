@@ -11,8 +11,8 @@ void finish(MYSQL *con) {
 }
 
 int main(int argc, char **argv) { // mailto user_name msg
-    // 1. check argc >= 3
-    if (argc < 3) { 
+    // 1. check argc >= 2
+    if (argc < 2) { 
         printf("Usage: mailto <user> <message>\n");
         return 1;
     }
@@ -51,16 +51,33 @@ int main(int argc, char **argv) { // mailto user_name msg
     
     // construct message
     char content[1024] = {0};
-    for (int i = 2; i < argc; i++) {
-        strcat(content, argv[i]);
-        if (i < argc - 1) strcat(content, " ");
+    if (argc >= 3) {
+        // 從 argv 組訊息：mailto bob hello world
+        for (int i = 2; i < argc; i++) {
+            strncat(content, argv[i], sizeof(content) - strlen(content) - 1);
+            if (i < argc - 1) strncat(content, " ", sizeof(content) - strlen(content) - 1);
+        }
+    } else {
+        // 從 stdin 讀訊息：mailto bob < somefile
+        size_t len = 0;
+        char buf[256];
+        while (fgets(buf, sizeof(buf), stdin) != NULL) {
+            strncat(content, buf, sizeof(content) - strlen(content) - 1);
+        }
+        // 去掉尾端換行
+        size_t clen = strlen(content);
+        while (clen > 0 && (content[clen-1] == '\n' || content[clen-1] == '\r'))
+            content[--clen] = '\0';
+        (void)len;
     }
 
     // insert data and overwrite sql string
     const char *from_user = getenv("MY_NAME");
     if (from_user == NULL) from_user = "unknown";
-    char sql_insert[2048];
-    snprintf(sql_insert, sizeof(sql_insert), "INSERT INTO mail (to_user, from_user, content) VALUES ('%s', '%s', '%s')", argv[1], from_user, content);
+    char escaped_content[2048];
+    mysql_real_escape_string(con, escaped_content, content, strlen(content));
+    char sql_insert[4096];
+    snprintf(sql_insert, sizeof(sql_insert), "INSERT INTO mail (to_user, from_user, content) VALUES ('%s', '%s', '%s')", argv[1], from_user, escaped_content);
     if (mysql_query(con, sql_insert)) finish(con);
 
     printf("Send accept !\n");
