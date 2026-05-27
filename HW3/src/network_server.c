@@ -28,19 +28,22 @@ static int run_cmd_argv(char *argv_cmd[]) {
     return result;
 }
 
-static void do_login() {
+// 回傳 0 = 登入成功，-1 = 斷線
+static int do_login() {
     char user_name[256], password[256];
 
     while (1) {
         // 1. ask for login
         printf("Login: ");
         fflush(stdout);
-        fgets(user_name, sizeof(user_name), stdin);
+        if (fgets(user_name, sizeof(user_name), stdin) == NULL) return -1;
         user_name[strcspn(user_name, "\r\n")] = '\0';  // 去掉 telnet 傳來的 \r\n
+
+        if (strcmp(user_name, "quit") == 0) return -1;  // 登入畫面輸入 quit 即斷線
 
         printf("Password: ");
         fflush(stdout);
-        fgets(password, sizeof(password), stdin);
+        if (fgets(password, sizeof(password), stdin) == NULL) return -1;
         password[strcspn(password, "\r\n")] = '\0';  // 去掉 telnet 傳來的 \r\n
 
         // 2. call bin/login（直接 execvp，不走 shell，避免 shell injection）
@@ -50,7 +53,7 @@ static void do_login() {
         // 3. three-case
         if (res == 0) { // success login
             setenv("MY_NAME", user_name, 1); // 把帳號存到環境變數，供 shell prompt 使用
-            break;
+            return 0;
         }
         else if (res == 1) { // pswd error
             printf("Password error !\n");
@@ -69,15 +72,24 @@ static void do_login() {
             if (option == 1) {
                 char new_user_name[256], new_password[256];
                 while (1) {
-                    printf("your user name: ");
+                    printf("your user name (quit to cancel): ");
                     fflush(stdout);
-                    fgets(new_user_name, sizeof(new_user_name), stdin);
+                    if (fgets(new_user_name, sizeof(new_user_name), stdin) == NULL) return -1;
                     new_user_name[strcspn(new_user_name, "\r\n")] = '\0';  // 去掉 telnet 傳來的 \r\n
+
+                    if (strcmp(new_user_name, "quit") == 0) break;  // 取消註冊，回到 Login:
 
                     printf("your password: ");
                     fflush(stdout);
-                    fgets(new_password, sizeof(new_password), stdin);
+                    if (fgets(new_password, sizeof(new_password), stdin) == NULL) return -1;
                     new_password[strcspn(new_password, "\r\n")] = '\0';  // 去掉 telnet 傳來的 \r\n
+
+                    // 空字串檢查
+                    if (new_user_name[0] == '\0' || new_password[0] == '\0') {
+                        printf("User name and password cannot be empty !\n");
+                        fflush(stdout);
+                        continue;
+                    }
 
                     char *reg_argv[] = {"bin/register", new_user_name, new_password, NULL};
                     int rres = run_cmd_argv(reg_argv);
@@ -95,10 +107,10 @@ static void do_login() {
             }
         }
     }
-    
+    return 0;
 }
 
-void start_server(int port, void (*child_main)()) {
+void start_server(int port, int (*child_main)()) {
     int listenfd, connfd;
     struct sockaddr_in servaddr, cliaddr;
     socklen_t clilen;
@@ -233,12 +245,49 @@ void start_server(int port, void (*child_main)()) {
             }
             // =====================================================
 
-            do_login();                   // 登入／註冊流程
+            // 登入 ↔ 登出循環：logout 回到 Login:，quit/EOF 斷線
+            while (1) {
+                if (do_login() == -1) break;  // Login 畫面輸入 quit 或 EOF → 直接斷線
 
-            // === 登入後更新 userlist 的 name 欄位 ===
-            {
-                const char *my_name = getenv("MY_NAME");
-                if (my_name) {
+                // === 登入後更新 userlist 的 name 欄位 ===
+                {
+                    const char *my_name = getenv("MY_NAME");
+                    if (my_name) {
+                        int ufd = open("/tmp/userlist", O_RDWR, 0644);
+                        if (ufd >= 0) {
+                            flock(ufd, LOCK_EX);
+                            FILE *ufin = fdopen(ufd, "r+");
+                            char lines[1024][128];
+                            int lcount = 0;
+                            while (lcount < 1024 && fgets(lines[lcount], 128, ufin))
+                                lcount++;
+                            rewind(ufin);
+                            ftruncate(ufd, 0);
+                            unsigned int u_uid, u_port; int u_pid;
+                            char u_name[30], u_ip[16];
+                            for (int i = 0; i < lcount; i++) {
+                                if (sscanf(lines[i], "%u %29s %15s %u %d",
+                                           &u_uid, u_name, u_ip, &u_port, &u_pid) == 5
+                                    && u_pid == getpid()) {
+                                    fprintf(ufin, "%u %s %s %u %d\n",
+                                            u_uid, my_name, u_ip, u_port, u_pid);
+                                } else {
+                                    fputs(lines[i], ufin);
+                                }
+                            }
+                            fflush(ufin);
+                            flock(ufd, LOCK_UN);
+                            fclose(ufin);
+                        }
+                    }
+                }
+                // ==========================================
+
+                int reason = child_main();    // 執行「服務顧客」函數
+
+                // === 登出後：清除登入狀態，把 userlist name 改回 no_name ===
+                unsetenv("MY_NAME");
+                {
                     int ufd = open("/tmp/userlist", O_RDWR, 0644);
                     if (ufd >= 0) {
                         flock(ufd, LOCK_EX);
@@ -255,8 +304,8 @@ void start_server(int port, void (*child_main)()) {
                             if (sscanf(lines[i], "%u %29s %15s %u %d",
                                        &u_uid, u_name, u_ip, &u_port, &u_pid) == 5
                                 && u_pid == getpid()) {
-                                fprintf(ufin, "%u %s %s %u %d\n",
-                                        u_uid, my_name, u_ip, u_port, u_pid);
+                                fprintf(ufin, "%u no_name %s %u %d\n",
+                                        u_uid, u_ip, u_port, u_pid);
                             } else {
                                 fputs(lines[i], ufin);
                             }
@@ -266,10 +315,11 @@ void start_server(int port, void (*child_main)()) {
                         fclose(ufin);
                     }
                 }
-            }
-            // ==========================================
+                // ==========================================================
 
-            child_main();                 // 執行「服務顧客」函數
+                if (reason != 1) break;  // 0 = quit/EOF → 斷線，離開循環
+                // reason == 1 → logout → 繼續回到 do_login()
+            }
 
             // === 斷線時從 /tmp/userlist 移除自己那行 ===
             // 避免每次重連 uid 會一直累加，舊的殘留條目也不會清除。

@@ -56,6 +56,12 @@ int main(int argc, char **argv) { // remove <group_name> <user_name> (only owner
     for (int i = 2; i < argc; i++) {
         const char *target = argv[i];
 
+        // owner 不能踢自己
+        if (strcmp(target, my_name) == 0) {
+            printf("%s is the owner, cannot remove yourself !\n", target);
+            continue;
+        }
+
         // 查 user 是否存在
         snprintf(sql, sizeof(sql), "SELECT uid FROM user WHERE name='%s' LIMIT 1", target);
         if (mysql_query(con, sql)) finish(con);

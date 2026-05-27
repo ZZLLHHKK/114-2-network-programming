@@ -46,10 +46,11 @@ int main(int argc, char **argv) { // argv[1] = account, argv[2] = password
     if (mysql_real_connect(con, DB_HOST, DB_USER, DB_PASSWORD, DB_NAME, 0, NULL, 0) == NULL) 
         finish(con);
 
-    char sql[100];
-    char *name = argv[1]; // user_name: <name>
+    char escaped_name[513];
+    mysql_real_escape_string(con, escaped_name, argv[1], strlen(argv[1]));
 
-    sprintf(sql, "SELECT uid FROM user WHERE name='%s' LIMIT 1", name);
+    char sql[600];
+    snprintf(sql, sizeof(sql), "SELECT uid FROM user WHERE name='%s' LIMIT 1", escaped_name);
 
     /*
     把你組好的 SQL 字串送到 DB 執行，回傳 0 代表成功、非 0 代表失敗。
@@ -79,8 +80,8 @@ int main(int argc, char **argv) { // argv[1] = account, argv[2] = password
     char hashed[200];
     strncpy(hashed, raw_hash ? raw_hash : argv[2], sizeof(hashed)-1);
     hashed[sizeof(hashed)-1] = '\0';
-    char sql2[512];
-    sprintf(sql2, "INSERT INTO user (name, password, grp) VALUES ('%s', '%s', 0)", argv[1], hashed);
+    char sql2[800];
+    snprintf(sql2, sizeof(sql2), "INSERT INTO user (name, password, grp) VALUES ('%s', '%s', 0)", escaped_name, hashed);
     if (mysql_query(con, sql2)) finish(con);
     printf("0\n");
     mysql_close(con);

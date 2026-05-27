@@ -1,6 +1,7 @@
 #include "../include/myhdr.h"
 
-void shell_loop() {
+// 回傳 0 = 斷線（quit/EOF），1 = 登出（logout）
+int shell_loop() {
     char input_line[5002]={0};   // 原始輸入字串（整行指令）
     char *argv_single[256] = {0};
     char line_copy[5002] = {0};  // split_commands 用的可修改副本
@@ -80,12 +81,14 @@ void shell_loop() {
         if (part_count >= 2 || number_n > 0 || ready_pending_idx != -1) 
             run_pipeline_command(part_count, cmds, argvs, parts, ready_pending_idx, pending, number_n, target_pending_idx);
         else if (part_count == 1) {
-            if (run_single_command(cmd_single, parts, argv_single, ready_pending_idx, pending) == 1)
-                break; // quit 指令
+            int ret = run_single_command(cmd_single, parts, argv_single, ready_pending_idx, pending);
+            if (ret == 1) { return 0; } // quit → 斷線
+            if (ret == 2) { return 1; } // logout → 回登入畫面
         } else // 空輸入（例如只按 Enter）
             continue;
         
     } while (1);
+    return 0; // EOF 或連線斷開
 }
 
 int main() {

@@ -32,10 +32,20 @@ int main(int argc, char **argv) { // delMail <mail_id>
     const char *my_name = getenv("MY_NAME");
     if (my_name == NULL) my_name = "unknown";
 
+    // argv[1] 必須是純整數，避免 SQL injection
+    for (int i = 0; argv[1][i] != '\0'; i++) {
+        if (argv[1][i] < '0' || argv[1][i] > '9') {
+            printf("Mail id unexist !\n");
+            mysql_close(con);
+            return 0;
+        }
+    }
+    long mail_id = atol(argv[1]);
+
     char sql[256];
     snprintf(sql, sizeof(sql),
-        "DELETE FROM mail WHERE id=%s AND to_user='%s'",
-        argv[1], my_name);
+        "DELETE FROM mail WHERE id=%ld AND to_user='%s'",
+        mail_id, my_name);
 
     if (mysql_query(con, sql)) finish(con);
 

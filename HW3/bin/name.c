@@ -57,21 +57,24 @@ int main(int argc, char **argv) {
         mysql_options(con, MYSQL_SET_CHARSET_NAME, "utf8");
         mysql_options(con, MYSQL_INIT_COMMAND, "SET NAMES utf8");
         if (con != NULL && mysql_real_connect(con, DB_HOST, DB_USER, DB_PASSWORD, DB_NAME, 0, NULL, 0) != NULL) {
-            char sql[300];
+            char esc_new[513], esc_old[513];
+            mysql_real_escape_string(con, esc_new, argv[1], strlen(argv[1]));
+            mysql_real_escape_string(con, esc_old, oldname, strlen(oldname));
+            char sql[1200];
             // user 表
-            snprintf(sql, sizeof(sql), "UPDATE user SET name='%s' WHERE name='%s'", argv[1], oldname);
+            snprintf(sql, sizeof(sql), "UPDATE user SET name='%s' WHERE name='%s'", esc_new, esc_old);
             mysql_query(con, sql);
             // grp_member 表（成員名稱）
-            snprintf(sql, sizeof(sql), "UPDATE grp_member SET user_name='%s' WHERE user_name='%s'", argv[1], oldname);
+            snprintf(sql, sizeof(sql), "UPDATE grp_member SET user_name='%s' WHERE user_name='%s'", esc_new, esc_old);
             mysql_query(con, sql);
             // grp 表（群主名稱）
-            snprintf(sql, sizeof(sql), "UPDATE grp SET owner='%s' WHERE owner='%s'", argv[1], oldname);
+            snprintf(sql, sizeof(sql), "UPDATE grp SET owner='%s' WHERE owner='%s'", esc_new, esc_old);
             mysql_query(con, sql);
             // mail 表（收件人）
-            snprintf(sql, sizeof(sql), "UPDATE mail SET to_user='%s' WHERE to_user='%s'", argv[1], oldname);
+            snprintf(sql, sizeof(sql), "UPDATE mail SET to_user='%s' WHERE to_user='%s'", esc_new, esc_old);
             mysql_query(con, sql);
             // mail 表（寄件人）
-            snprintf(sql, sizeof(sql), "UPDATE mail SET from_user='%s' WHERE from_user='%s'", argv[1], oldname);
+            snprintf(sql, sizeof(sql), "UPDATE mail SET from_user='%s' WHERE from_user='%s'", esc_new, esc_old);
             mysql_query(con, sql);
         }
         if (con) mysql_close(con);

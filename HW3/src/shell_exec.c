@@ -1,6 +1,6 @@
 #include "../include/myhdr.h"
 
-// 回傳 1 表示要 quit，0 表示繼續
+// 回傳 0 表示繼續，1 表示 quit（斷線），2 表示 logout（回登入畫面）
 int run_single_command(command_t *cmd_single, char **parts, char **argv_single,
                        int ready_pending_idx, pending_pipe_t pending[]) {
     cmd_single = parser(parts[0]);
@@ -17,6 +17,13 @@ int run_single_command(command_t *cmd_single, char **parts, char **argv_single,
         consume_ready_pending(ready_pending_idx, pending);
         free(cmd_single);
         return 1;
+    }
+
+    // built-in: logout（登出，回到登入畫面）
+    if (strcmp(argv_single[0], "logout") == 0) {
+        consume_ready_pending(ready_pending_idx, pending);
+        free(cmd_single);
+        return 2;
     }
 
     // built-in: printenv

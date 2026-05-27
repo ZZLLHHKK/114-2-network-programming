@@ -40,23 +40,40 @@ int main(int argc, char **argv) { // leaveGroup <group_name>
     if (num_row == 0) {
         printf("Group not found !\n");
     } else {
-        char sql1[512]; // check whether I have joint the group or not
-        snprintf(sql1, sizeof(sql1), "SELECT id FROM grp_member WHERE group_name='%s' AND user_name='%s'", argv[1], my_name);
+        // 取出 owner 名字
+        MYSQL_ROW row = mysql_fetch_row(result);
+        char owner[64] = "";
+        if (row && row[0]) strncpy(owner, row[0], sizeof(owner) - 1);
 
-        if (mysql_query(con, sql1)) finish(con);
+        if (strcmp(my_name, owner) == 0) {
+            // owner 離開 → 直接解散群組
+            char sql_del_mem[256], sql_del_grp[256];
+            snprintf(sql_del_mem, sizeof(sql_del_mem),
+                     "DELETE FROM grp_member WHERE group_name='%s'", argv[1]);
+            snprintf(sql_del_grp, sizeof(sql_del_grp),
+                     "DELETE FROM grp WHERE name='%s'", argv[1]);
+            if (mysql_query(con, sql_del_mem)) finish(con);
+            if (mysql_query(con, sql_del_grp)) finish(con);
+            printf("You are the owner, group '%s' has been deleted !\n", argv[1]);
+        } else {
+            char sql1[512]; // check whether I have joined the group or not
+            snprintf(sql1, sizeof(sql1), "SELECT id FROM grp_member WHERE group_name='%s' AND user_name='%s'", argv[1], my_name);
 
-        MYSQL_RES *res1 = mysql_store_result(con);
-        int search_row = mysql_num_rows(res1);
+            if (mysql_query(con, sql1)) finish(con);
 
-        if (search_row == 0) // You are not in group
-            printf("Leave fault !\n");
-        else {
-            char sql2[512];
-            snprintf(sql2, sizeof(sql2), "DELETE FROM grp_member WHERE group_name='%s' AND user_name='%s'", argv[1], my_name);
-            if (mysql_query(con, sql2)) finish(con);
-            printf("Leave success !\n");
+            MYSQL_RES *res1 = mysql_store_result(con);
+            int search_row = mysql_num_rows(res1);
+
+            if (search_row == 0) // You are not in group
+                printf("Leave fault !\n");
+            else {
+                char sql2[512];
+                snprintf(sql2, sizeof(sql2), "DELETE FROM grp_member WHERE group_name='%s' AND user_name='%s'", argv[1], my_name);
+                if (mysql_query(con, sql2)) finish(con);
+                printf("Leave success !\n");
+            }
+            mysql_free_result(res1);
         }
-        mysql_free_result(res1);
     }
 
     mysql_free_result(result);
