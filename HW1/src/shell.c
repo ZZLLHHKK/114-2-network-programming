@@ -50,6 +50,14 @@ void consume_ready_pending(int ready_pending_idx, pending_pipe_t pending[]) {
     pending[ready_pending_idx].target_line = 0;
 }
 
+// Unknown command 不計入行號：把所有 pending 的 target_line 往後推 1
+void shift_all_pending_targets(pending_pipe_t pending[], int size) {
+    for (int i = 0; i < size; ++i) {
+        if (pending[i].used)
+            pending[i].target_line++;
+    }
+}
+
 int main() {
     char input_line[5002]={0};   // 原始輸入字串（整行指令）
     char *argv_single[256] = {0};
@@ -240,11 +248,10 @@ int main() {
                 if (i == 0) first_status = s;
             }
 
-            // If single unknown command was the target of a numbered pipe,
-            // forward the pending to the next line instead of consuming it.
-            if (part_count == 1 && ready_pending_idx != -1 &&
+            // Unknown command 不計入行號：所有 pending target 往後推 1
+            if (part_count == 1 &&
                 WIFEXITED(first_status) && WEXITSTATUS(first_status) == 127) {
-                pending[ready_pending_idx].target_line++;
+                shift_all_pending_targets(pending, 128);
             } else {
                 consume_ready_pending(ready_pending_idx, pending);
             }
@@ -329,10 +336,9 @@ int main() {
                 // parent (avoid zombie process)
                 int status;
                 waitpid(pid, &status, 0);
-                // If unknown command was the target of a numbered pipe, forward to next line.
-                if (ready_pending_idx != -1 &&
-                    WIFEXITED(status) && WEXITSTATUS(status) == 127) {
-                    pending[ready_pending_idx].target_line++;
+                // Unknown command 不計入行號：所有 pending target 往後推 1
+                if (WIFEXITED(status) && WEXITSTATUS(status) == 127) {
+                    shift_all_pending_targets(pending, 128);
                 } else {
                     consume_ready_pending(ready_pending_idx, pending);
                 }
