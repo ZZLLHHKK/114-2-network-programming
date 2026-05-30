@@ -98,9 +98,8 @@ int run_single_command(command_t *cmd_single, char **parts, char **argv_single,
         // parent
         int status;
         waitpid(pid, &status, 0);
-        if (ready_pending_idx != -1 &&
-            WIFEXITED(status) && WEXITSTATUS(status) == 127) {
-            pending[ready_pending_idx].target_line++;
+        if (WIFEXITED(status) && WEXITSTATUS(status) == 127) {
+            shift_all_pending_targets(pending, 128);
         } else {
             consume_ready_pending(ready_pending_idx, pending);
         }
@@ -212,9 +211,9 @@ void run_pipeline_command(int part_count, command_t *cmds[], char *argvs[][256],
         if (i == 0) first_status = s;
     }
 
-    if (part_count == 1 && ready_pending_idx != -1 &&
+    if (part_count == 1 &&
         WIFEXITED(first_status) && WEXITSTATUS(first_status) == 127) {
-        pending[ready_pending_idx].target_line++;
+        shift_all_pending_targets(pending, 128);
     } else {
         consume_ready_pending(ready_pending_idx, pending);
     }

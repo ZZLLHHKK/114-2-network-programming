@@ -40,3 +40,11 @@ void consume_ready_pending(int ready_pending_idx, pending_pipe_t pending[]) {
     pending[ready_pending_idx].used           = false;
     pending[ready_pending_idx].target_line    = 0;
 }
+
+/* Unknown command 不計入行號：把所有 pending 的 target_line 往後推 1 */
+void shift_all_pending_targets(pending_pipe_t pending[], int size) {
+    for (int i = 0; i < size; ++i) {
+        if (pending[i].used)
+            pending[i].target_line++;
+    }
+}

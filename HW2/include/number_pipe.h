@@ -17,5 +17,6 @@ int  find_ready_pending_index(int current_line, pending_pipe_t pending[]);
 int  find_pending_by_target(int target, pending_pipe_t pending[]);
 int  alloc_pending_slot(pending_pipe_t pending[]);
 void consume_ready_pending(int ready_pending_idx, pending_pipe_t pending[]);
+void shift_all_pending_targets(pending_pipe_t pending[], int size);
 
 #endif

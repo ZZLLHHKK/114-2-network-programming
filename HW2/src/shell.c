@@ -73,6 +73,20 @@ void shell_loop() {
         }
         
 
+        /* Rule 5/6: quit 永遠是 builtin，即使有 pending numbered pipe 也不例外 */
+        if (part_count == 1) {
+            cmd_single = parser(parts[0]);
+            if (cmd_single != NULL && cmd_single->command[0] != '\0') {
+                build_argv(cmd_single, argv_single);
+                if (strcmp(argv_single[0], "quit") == 0) {
+                    free(cmd_single); cmd_single = NULL;
+                    break;
+                }
+            }
+            free(cmd_single); cmd_single = NULL;
+            memset(argv_single, 0, sizeof(argv_single));
+        }
+
         if (part_count >= 2 || number_n > 0 || ready_pending_idx != -1) 
             run_pipeline_command(part_count, cmds, argvs, parts, ready_pending_idx, pending, number_n, target_pending_idx);
         else if (part_count == 1) {

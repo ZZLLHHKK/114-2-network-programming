@@ -3,6 +3,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 
 void finish(MYSQL *con) {
     printf("%s\n", mysql_error(con));
@@ -52,14 +55,49 @@ int main(int argc, char **argv) { // mailto user_name msg
     // construct message
     char content[1024] = {0};
     if (argc >= 3) {
-        // 從 argv 組訊息：mailto bob hello world
-        for (int i = 2; i < argc; i++) {
-            strncat(content, argv[i], sizeof(content) - strlen(content) - 1);
-            if (i < argc - 1) strncat(content, " ", sizeof(content) - strlen(content) - 1);
+        if (strcmp(argv[2], "<") == 0 && argc >= 4) {
+            /* mailto user < command  →  執行 command，捕獲其 stdout 當信件內容 */
+            int pfd[2];
+            if (pipe(pfd) == -1) { perror("pipe"); mysql_close(con); exit(1); }
+            pid_t cpid = fork();
+            if (cpid < 0) { perror("fork"); mysql_close(con); exit(1); }
+            if (cpid == 0) {
+                /* child: exec command，stdout → pipe write end */
+                close(pfd[0]);
+                dup2(pfd[1], STDOUT_FILENO);
+                close(pfd[1]);
+                /* argv[3], argv[4], ... 是要執行的 command 與其參數 */
+                char *cmd_argv[argc - 2]; /* argc-3 個 arg + NULL */
+                for (int i = 3; i < argc; i++)
+                    cmd_argv[i - 3] = argv[i];
+                cmd_argv[argc - 3] = NULL;
+                execvp(cmd_argv[0], cmd_argv);
+                exit(127);
+            } else {
+                /* parent: 從 pipe 讀取 command 的輸出 */
+                close(pfd[1]);
+                char buf[256];
+                ssize_t nr;
+                while ((nr = read(pfd[0], buf, sizeof(buf) - 1)) > 0) {
+                    buf[nr] = '\0';
+                    strncat(content, buf, sizeof(content) - strlen(content) - 1);
+                }
+                close(pfd[0]);
+                waitpid(cpid, NULL, 0);
+            }
+            /* 去掉尾端換行 */
+            size_t clen = strlen(content);
+            while (clen > 0 && (content[clen-1] == '\n' || content[clen-1] == '\r'))
+                content[--clen] = '\0';
+        } else {
+            /* 原本行為：把 argv[2..] 串成訊息 */
+            for (int i = 2; i < argc; i++) {
+                strncat(content, argv[i], sizeof(content) - strlen(content) - 1);
+                if (i < argc - 1) strncat(content, " ", sizeof(content) - strlen(content) - 1);
+            }
         }
     } else {
-        // 從 stdin 讀訊息：mailto bob < somefile
-        size_t len = 0;
+        // 從 stdin 讀訊息：mailto bob（不帶任何訊息時）
         char buf[256];
         while (fgets(buf, sizeof(buf), stdin) != NULL) {
             strncat(content, buf, sizeof(content) - strlen(content) - 1);
@@ -68,7 +106,6 @@ int main(int argc, char **argv) { // mailto user_name msg
         size_t clen = strlen(content);
         while (clen > 0 && (content[clen-1] == '\n' || content[clen-1] == '\r'))
             content[--clen] = '\0';
-        (void)len;
     }
 
     // insert data and overwrite sql string
